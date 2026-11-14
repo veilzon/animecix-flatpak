@@ -79,6 +79,7 @@ jobs:
           flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
           flatpak install --user -y flathub org.gnome.Platform//50 org.gnome.Sdk//50
           flatpak install --user -y flathub org.freedesktop.Sdk.Extension.rust-stable//25.08
+          flatpak install --user -y flathub org.freedesktop.Sdk.Extension.llvm20//25.08
 
       - name: Build and sign
         if: steps.check.outputs.skip != 'true'
@@ -128,6 +129,7 @@ jobs:
           flatpak --user remote-add --no-gpg-verify animecix-test public/repo
           flatpak --user install -y animecix-test io.github.veilzon.AnimeciX
           xvfb-run -a flatpak run --command=animecix io.github.veilzon.AnimeciX --check-icons
+          xvfb-run -a flatpak run --command=animecix io.github.veilzon.AnimeciX --check-shaders
           flatpak --user info io.github.veilzon.AnimeciX | sed -n '1,12p'
 
       - name: Setup Pages
