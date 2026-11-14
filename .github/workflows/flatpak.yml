@@ -1,0 +1,146 @@
+name: Flatpak repo build
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "AnimeciX tag (örn. v1.3.2); boşsa son release"
+        required: false
+        default: ""
+  schedule:
+    - cron: "0 */6 * * *"
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: flatpak-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Resolve tag
+        id: tag
+        run: |
+          set -euo pipefail
+          TAG="${{ inputs.tag }}"
+          if [ -z "$TAG" ]; then
+            TAG=$(curl -fsSL https://api.github.com/repos/veilzon/animecix-linux/releases/latest \
+              | python3 -c 'import sys,json; print(json.load(sys.stdin)["tag_name"])')
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Sürüm: $TAG"
+
+      - name: Skip if already built
+        id: check
+        run: |
+          set -euo pipefail
+          CURRENT=$(curl -fsSL "https://veilzon.github.io/animecix-flatpak/version.txt" 2>/dev/null || true)
+          if [ "$CURRENT" = "${{ steps.tag.outputs.tag }}" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "Bu sürüm zaten yayında: $CURRENT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout AnimeciX
+        if: steps.check.outputs.skip != 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: veilzon/animecix-linux
+          ref: ${{ steps.tag.outputs.tag }}
+          path: src
+
+      - name: Cache Flatpak runtime and build
+        if: steps.check.outputs.skip != 'true'
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/flatpak-builder
+            ~/.local/share/flatpak
+          key: flatpak-${{ runner.os }}-${{ hashFiles('src/packaging/flatpak/io.github.veilzon.AnimeciX.yml', 'src/Cargo.lock') }}
+          restore-keys: |
+            flatpak-${{ runner.os }}-
+
+      - name: Install Flatpak runtime
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder xvfb
+          flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+          flatpak install --user -y flathub org.gnome.Platform//50 org.gnome.Sdk//50
+          flatpak install --user -y flathub org.freedesktop.Sdk.Extension.rust-stable//25.08
+
+      - name: Build and sign
+        if: steps.check.outputs.skip != 'true'
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.FLATPAK_GPG_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          mkdir -p public/repo
+          printf '%s' "$GPG_PRIVATE_KEY" | gpg --batch --import
+          KEYID=$(gpg --list-secret-keys --with-colons | awk -F: '/^sec:/ {print $5; exit}')
+          echo "KEYID=$KEYID" >> "$GITHUB_ENV"
+          flatpak-builder --user --disable-rofiles-fuse --force-clean \
+            --repo=public/repo --gpg-sign="$KEYID" \
+            --install-deps-from=flathub \
+            builddir src/packaging/flatpak/io.github.veilzon.AnimeciX.yml
+          flatpak build-update-repo --gpg-sign="$KEYID" --prune \
+            --generate-static-deltas --title="AnimeciX" \
+            --default-branch=stable public/repo
+          gpg --armor --export "$KEYID" | base64 -w0 > public/gpgkey.b64
+          {
+            echo "[Flatpak Ref]"
+            echo "Title=AnimeciX"
+            echo "Name=io.github.veilzon.AnimeciX"
+            echo "Branch=stable"
+            echo "Url=https://veilzon.github.io/animecix-flatpak/repo/"
+            echo "SuggestRemoteName=animecix"
+            echo "RuntimeRepo=https://flathub.org/repo/flathub.flatpakrepo"
+            echo "GPGKey=$(cat public/gpgkey.b64)"
+            echo "IsRuntime=false"
+          } > public/animecix.flatpakref
+          echo "${{ steps.tag.outputs.tag }}" > public/version.txt
+          touch public/.nojekyll
+          cat > public/index.html <<'HTML'
+          <!doctype html>
+          <meta charset="utf-8">
+          <title>AnimeciX Flatpak</title>
+          <h1>AnimeciX Flatpak</h1>
+          <p><a href="animecix.flatpakref">animecix.flatpakref</a></p>
+          <pre>flatpak install --from https://veilzon.github.io/animecix-flatpak/animecix.flatpakref</pre>
+          HTML
+
+      - name: Smoke test
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          set -euo pipefail
+          flatpak --user remote-delete animecix-test 2>/dev/null || true
+          flatpak --user remote-add --no-gpg-verify animecix-test public/repo
+          flatpak --user install -y animecix-test io.github.veilzon.AnimeciX
+          xvfb-run -a flatpak run --command=animecix io.github.veilzon.AnimeciX --check-icons
+          flatpak --user info io.github.veilzon.AnimeciX | sed -n '1,12p'
+
+      - name: Setup Pages
+        if: steps.check.outputs.skip != 'true'
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        if: steps.check.outputs.skip != 'true'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+      - name: Deploy to GitHub Pages
+        if: steps.check.outputs.skip != 'true'
+        id: deployment
+        uses: actions/deploy-pages@v4
