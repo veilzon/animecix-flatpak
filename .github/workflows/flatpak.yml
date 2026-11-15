@@ -11,6 +11,10 @@ on:
         description: "Zaten yayındaysa da yeniden derle"
         type: boolean
         default: false
+      source_ref:
+        description: "Kaynak ref (boşsa tag; örn. main)"
+        required: false
+        default: ""
   schedule:
     - cron: "0 */6 * * *"
 
@@ -41,7 +45,10 @@ jobs:
               | python3 -c 'import sys,json; print(json.load(sys.stdin)["tag_name"])')
           fi
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          echo "Sürüm: $TAG"
+          REF="${{ inputs.source_ref }}"
+          [ -n "$REF" ] || REF="$TAG"
+          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+          echo "Sürüm: $TAG (kaynak: $REF)"
 
       - name: Skip if already built
         id: check
@@ -65,7 +72,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: veilzon/animecix-linux
-          ref: ${{ steps.tag.outputs.tag }}
+          ref: ${{ steps.tag.outputs.ref }}
           path: src
 
       - name: Cache Flatpak runtime and build
