@@ -94,6 +94,7 @@ jobs:
           path: |
             ~/.cache/flatpak-builder
             ~/.local/share/flatpak
+            ~/.cache/ccache
           key: flatpak-${{ runner.os }}-${{ hashFiles('src/packaging/flatpak/io.github.veilzon.AnimeciX.yml', 'src/Cargo.lock') }}
           restore-keys: |
             flatpak-${{ runner.os }}-
@@ -103,7 +104,7 @@ jobs:
         run: |
           set -euo pipefail
           sudo apt-get update
-          sudo apt-get install -y flatpak flatpak-builder xvfb ffmpeg
+          sudo apt-get install -y flatpak flatpak-builder xvfb ffmpeg ccache
           flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
           flatpak install --user -y flathub org.gnome.Platform//50 org.gnome.Sdk//50
           flatpak install --user -y flathub org.freedesktop.Sdk.Extension.rust-stable//25.08
@@ -116,10 +117,11 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p public/repo
+          ccache --max-size=2G || true
           printf '%s' "$GPG_PRIVATE_KEY" | gpg --batch --import
           KEYID=$(gpg --list-secret-keys --with-colons | awk -F: '/^sec:/ {print $5; exit}')
           echo "KEYID=$KEYID" >> "$GITHUB_ENV"
-          flatpak-builder --user --disable-rofiles-fuse --force-clean \
+          flatpak-builder --user --disable-rofiles-fuse --force-clean --ccache \
             --repo=public/repo --gpg-sign="$KEYID" --default-branch=stable \
             --install-deps-from=flathub \
             builddir src/packaging/flatpak/io.github.veilzon.AnimeciX.yml
