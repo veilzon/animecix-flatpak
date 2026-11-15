@@ -188,6 +188,8 @@ jobs:
           xvfb-run -a flatpak run --command=animecix io.github.veilzon.AnimeciX --check-icons
           xvfb-run -a flatpak run --command=animecix io.github.veilzon.AnimeciX --check-shaders
           flatpak run --command=mpv io.github.veilzon.AnimeciX --version
+          # LuaJIT/OSC kontrolü: OSC olmadan oynatma kontrolleri görünmez.
+          flatpak run --command=mpv io.github.veilzon.AnimeciX --list-options | grep -q -- '--osc' || { echo 'OSC/Lua yok'; exit 1; }
           ffmpeg -hide_banner -loglevel error -y -f lavfi -i testsrc=size=320x240:rate=30 -t 1 -pix_fmt yuv420p "$HOME/mpv-smoke.mp4"
           flatpak run --command=mpv io.github.veilzon.AnimeciX --no-config --vo=null --ao=null --really-quiet "$HOME/mpv-smoke.mp4"
           # HTTPS/FFmpeg TLS kontrolü
