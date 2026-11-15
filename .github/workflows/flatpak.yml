@@ -91,7 +91,7 @@ jobs:
         run: |
           set -euo pipefail
           sudo apt-get update
-          sudo apt-get install -y flatpak flatpak-builder xvfb
+          sudo apt-get install -y flatpak flatpak-builder xvfb ffmpeg
           flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
           flatpak install --user -y flathub org.gnome.Platform//50 org.gnome.Sdk//50
           flatpak install --user -y flathub org.freedesktop.Sdk.Extension.rust-stable//25.08
@@ -147,6 +147,9 @@ jobs:
           flatpak --user install -y animecix-test io.github.veilzon.AnimeciX
           xvfb-run -a flatpak run --command=animecix io.github.veilzon.AnimeciX --check-icons
           xvfb-run -a flatpak run --command=animecix io.github.veilzon.AnimeciX --check-shaders
+          flatpak run --command=mpv io.github.veilzon.AnimeciX --version
+          ffmpeg -hide_banner -loglevel error -y -f lavfi -i testsrc=size=320x240:rate=30 -t 1 -pix_fmt yuv420p "$HOME/mpv-smoke.mp4"
+          flatpak run --command=mpv io.github.veilzon.AnimeciX --no-config --vo=null --ao=null --really-quiet "$HOME/mpv-smoke.mp4"
           flatpak --user info io.github.veilzon.AnimeciX//stable | sed -n '1,12p'
 
       - name: Setup Pages
