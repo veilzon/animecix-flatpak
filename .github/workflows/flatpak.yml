@@ -92,7 +92,7 @@ jobs:
           KEYID=$(gpg --list-secret-keys --with-colons | awk -F: '/^sec:/ {print $5; exit}')
           echo "KEYID=$KEYID" >> "$GITHUB_ENV"
           flatpak-builder --user --disable-rofiles-fuse --force-clean \
-            --repo=public/repo --gpg-sign="$KEYID" \
+            --repo=public/repo --gpg-sign="$KEYID" --default-branch=stable \
             --install-deps-from=flathub \
             builddir src/packaging/flatpak/io.github.veilzon.AnimeciX.yml
           flatpak build-update-repo --gpg-sign="$KEYID" --prune \
