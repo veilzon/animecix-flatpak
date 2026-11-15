@@ -143,11 +143,18 @@ jobs:
         run: |
           set -euo pipefail
           flatpak --user remote-delete --force animecix-test 2>/dev/null || true
-          # Cache'ten gelen eski kurulumu kaldır; yoksa install "zaten kurulu"
-          # deyip yeni build'i test etmeden atlar.
-          flatpak --user uninstall -y io.github.veilzon.AnimeciX 2>/dev/null || true
+          # Cache'ten gelen eski kurulumları kaldır. Aynı uygulamanın stable ve
+          # master dalları kurulu olabildiği için tek tek kaldırıyoruz; yoksa
+          # install "zaten kurulu" deyip yeni build'i test etmeden atlar.
+          flatpak --user list --app --columns=ref \
+            | grep '^app/io.github.veilzon.AnimeciX/' \
+            | while read -r ref; do flatpak --user uninstall -y "$ref" || true; done || true
           flatpak --user remote-add --no-gpg-verify animecix-test public/repo
-          flatpak --user install -y animecix-test io.github.veilzon.AnimeciX
+          flatpak --user install -y --reinstall animecix-test io.github.veilzon.AnimeciX
+          EXPECTED="${{ steps.tag.outputs.tag }}"; EXPECTED="${EXPECTED#v}"
+          VER=$(flatpak --user info io.github.veilzon.AnimeciX//stable | awk '/Version:/ {print $2; exit}')
+          echo "Kurulan sürüm: $VER (beklenen: $EXPECTED)"
+          [ "$VER" = "$EXPECTED" ] || { echo "HATA: yeni build kurulmadı"; exit 1; }
           flatpak --user info io.github.veilzon.AnimeciX//stable | sed -n '1,12p'
           xvfb-run -a flatpak run --command=animecix io.github.veilzon.AnimeciX --check-icons
           xvfb-run -a flatpak run --command=animecix io.github.veilzon.AnimeciX --check-shaders
