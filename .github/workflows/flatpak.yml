@@ -134,7 +134,7 @@ jobs:
         if: steps.check.outputs.skip != 'true'
         run: |
           set -euo pipefail
-          flatpak --user remote-delete animecix-test 2>/dev/null || true
+          flatpak --user remote-delete --force animecix-test 2>/dev/null || true
           flatpak --user remote-add --no-gpg-verify animecix-test public/repo
           flatpak --user install -y animecix-test io.github.veilzon.AnimeciX
           xvfb-run -a flatpak run --command=animecix io.github.veilzon.AnimeciX --check-icons
