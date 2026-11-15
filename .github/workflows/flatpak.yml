@@ -167,12 +167,15 @@ jobs:
         if: failure()
         run: |
           set +e
-          echo '--- catchsegv ---'
-          flatpak run --command=sh io.github.veilzon.AnimeciX -c 'catchsegv /app/bin/mpv --version' 2>&1 | tail -n 80
-          echo '--- strace ---'
-          flatpak run --command=sh io.github.veilzon.AnimeciX -c 'strace -f /app/bin/mpv --version' 2>&1 | tail -n 120
+          echo '--- LD_DEBUG=libs ---'
+          flatpak run --command=sh io.github.veilzon.AnimeciX -c 'LD_DEBUG=libs /app/bin/mpv --version' 2>&1 | tail -n 120
+          echo '--- MALLOC_CHECK ---'
+          flatpak run --command=sh io.github.veilzon.AnimeciX -c 'MALLOC_CHECK_=3 /app/bin/mpv --version' 2>&1 | tail -n 60
+          echo '--- gdb (SDK) ---'
+          flatpak-builder --run builddir src/packaging/flatpak/io.github.veilzon.AnimeciX.yml \
+            gdb -batch -ex run -ex 'thread apply all bt' --args /app/bin/mpv --version 2>&1 | tail -n 140
           echo '--- ldd ---'
-          flatpak run --command=sh io.github.veilzon.AnimeciX -c 'ldd /app/bin/mpv' 2>&1 | tail -n 60
+          flatpak run --command=sh io.github.veilzon.AnimeciX -c 'ldd /app/bin/mpv' 2>&1 | tail -n 80
 
       - name: Setup Pages
         if: steps.check.outputs.skip != 'true'
