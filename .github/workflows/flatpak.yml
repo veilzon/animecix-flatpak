@@ -7,6 +7,10 @@ on:
         description: "AnimeciX tag (örn. v1.3.2); boşsa son release"
         required: false
         default: ""
+      force:
+        description: "Zaten yayındaysa da yeniden derle"
+        type: boolean
+        default: false
   schedule:
     - cron: "0 */6 * * *"
 
@@ -43,6 +47,11 @@ jobs:
         id: check
         run: |
           set -euo pipefail
+          if [ "${{ inputs.force }}" = "true" ]; then
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            echo "Zorla yeniden derleme"
+            exit 0
+          fi
           CURRENT=$(curl -fsSL "https://veilzon.github.io/animecix-flatpak/version.txt" 2>/dev/null || true)
           if [ "$CURRENT" = "${{ steps.tag.outputs.tag }}" ]; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
