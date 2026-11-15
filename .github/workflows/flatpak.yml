@@ -87,17 +87,32 @@ jobs:
             exit 1
           }
 
-      - name: Cache Flatpak runtime and build
+      # Runtime cache'i sabit anahtarla tutulur; manifest/Cargo.lock
+      # değişse bile GNOME runtime + SDK yeniden indirilmez.
+      - name: Cache Flatpak runtime
         if: steps.check.outputs.skip != 'true'
         uses: actions/cache@v4
         with:
-          path: |
-            ~/.cache/flatpak-builder
-            ~/.local/share/flatpak
-            ~/.cache/ccache
-          key: flatpak-${{ runner.os }}-${{ hashFiles('src/packaging/flatpak/io.github.veilzon.AnimeciX.yml', 'src/Cargo.lock') }}
+          path: ~/.local/share/flatpak
+          key: flatpak-runtime-${{ runner.os }}-gnome50-rust25.08-llvm25.08-v1
+
+      - name: Cache Flatpak builder
+        if: steps.check.outputs.skip != 'true'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/flatpak-builder
+          key: flatpak-builder-${{ runner.os }}-${{ hashFiles('src/packaging/flatpak/io.github.veilzon.AnimeciX.yml', 'src/Cargo.lock') }}
           restore-keys: |
-            flatpak-${{ runner.os }}-
+            flatpak-builder-${{ runner.os }}-
+
+      - name: Cache ccache
+        if: steps.check.outputs.skip != 'true'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-${{ runner.os }}-${{ hashFiles('src/packaging/flatpak/io.github.veilzon.AnimeciX.yml') }}
+          restore-keys: |
+            ccache-${{ runner.os }}-
 
       - name: Install Flatpak runtime
         if: steps.check.outputs.skip != 'true'
