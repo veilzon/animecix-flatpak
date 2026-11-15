@@ -191,7 +191,7 @@ jobs:
           ffmpeg -hide_banner -loglevel error -y -f lavfi -i testsrc=size=320x240:rate=30 -t 1 -pix_fmt yuv420p "$HOME/mpv-smoke.mp4"
           flatpak run --command=mpv io.github.veilzon.AnimeciX --no-config --vo=null --ao=null --really-quiet "$HOME/mpv-smoke.mp4"
           # HTTPS/FFmpeg TLS kontrolü
-          timeout 40 flatpak run --command=mpv io.github.veilzon.AnimeciX --no-config --vo=null --ao=null --really-quiet https://filesamples.com/samples/video/mp4/sample_640x360.mp4
+          timeout 40 flatpak run --command=mpv io.github.veilzon.AnimeciX --no-config --vo=null --ao=null --really-quiet https://www.w3schools.com/html/mov_bbb.mp4
           flatpak --user info io.github.veilzon.AnimeciX//stable | sed -n '1,12p'
 
       - name: mpv çökme tanılama
