@@ -75,6 +75,18 @@ jobs:
           ref: ${{ steps.tag.outputs.ref }}
           path: src
 
+      - name: Sürüm kontrolü (Cargo.toml == tag)
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          set -euo pipefail
+          VER=$(grep -m1 '^version =' src/Cargo.toml | cut -d'"' -f2)
+          EXPECTED="${{ steps.tag.outputs.tag }}"; EXPECTED="${EXPECTED#v}"
+          echo "kaynak sürümü=$VER etiket=$EXPECTED"
+          [ "$VER" = "$EXPECTED" ] || {
+            echo "HATA: kaynak sürümü ($VER) etiketle ($EXPECTED) uyuşmuyor"
+            exit 1
+          }
+
       - name: Cache Flatpak runtime and build
         if: steps.check.outputs.skip != 'true'
         uses: actions/cache@v4
