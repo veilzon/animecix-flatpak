@@ -104,6 +104,7 @@ jobs:
             --repo=public/repo --gpg-sign="$KEYID" --default-branch=stable \
             --install-deps-from=flathub \
             builddir src/packaging/flatpak/io.github.veilzon.AnimeciX.yml
+          rm -f public/repo/refs/heads/master
           flatpak build-update-repo --gpg-sign="$KEYID" --prune \
             --generate-static-deltas --title="AnimeciX" \
             --default-branch=stable public/repo
@@ -139,7 +140,7 @@ jobs:
           flatpak --user install -y animecix-test io.github.veilzon.AnimeciX
           xvfb-run -a flatpak run --command=animecix io.github.veilzon.AnimeciX --check-icons
           xvfb-run -a flatpak run --command=animecix io.github.veilzon.AnimeciX --check-shaders
-          flatpak --user info io.github.veilzon.AnimeciX | sed -n '1,12p'
+          flatpak --user info io.github.veilzon.AnimeciX//stable | sed -n '1,12p'
 
       - name: Setup Pages
         if: steps.check.outputs.skip != 'true'
