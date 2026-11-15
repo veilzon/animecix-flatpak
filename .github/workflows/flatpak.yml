@@ -163,6 +163,17 @@ jobs:
           flatpak run --command=mpv io.github.veilzon.AnimeciX --no-config --vo=null --ao=null --really-quiet "$HOME/mpv-smoke.mp4"
           flatpak --user info io.github.veilzon.AnimeciX//stable | sed -n '1,12p'
 
+      - name: mpv çökme tanılama
+        if: failure()
+        run: |
+          set +e
+          echo '--- catchsegv ---'
+          flatpak run --command=sh io.github.veilzon.AnimeciX -c 'catchsegv /app/bin/mpv --version' 2>&1 | tail -n 80
+          echo '--- strace ---'
+          flatpak run --command=sh io.github.veilzon.AnimeciX -c 'strace -f /app/bin/mpv --version' 2>&1 | tail -n 120
+          echo '--- ldd ---'
+          flatpak run --command=sh io.github.veilzon.AnimeciX -c 'ldd /app/bin/mpv' 2>&1 | tail -n 60
+
       - name: Setup Pages
         if: steps.check.outputs.skip != 'true'
         uses: actions/configure-pages@v5
