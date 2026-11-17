@@ -41,8 +41,8 @@ jobs:
           set -euo pipefail
           TAG="${{ inputs.tag }}"
           if [ -z "$TAG" ]; then
-            TAG=$(curl -fsSL https://api.github.com/repos/veilzon/animecix-linux/releases/latest \
-              | python3 -c 'import sys,json; print(json.load(sys.stdin)["tag_name"])')
+            TAG=$(curl -fsSLI -o /dev/null -w '%{url_effective}' \
+              https://github.com/veilzon/animecix-linux/releases/latest | sed 's#.*/tag/##')
           fi
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           REF="${{ inputs.source_ref }}"
@@ -187,6 +187,9 @@ jobs:
           flatpak --user info io.github.veilzon.AnimeciX//stable | sed -n '1,12p'
           xvfb-run -a flatpak run --command=animecix io.github.veilzon.AnimeciX --check-icons
           xvfb-run -a flatpak run --command=animecix io.github.veilzon.AnimeciX --check-shaders
+          xvfb-run -a flatpak run --env=LIBGL_ALWAYS_SOFTWARE=1 --command=animecix \
+            io.github.veilzon.AnimeciX --player-smoke \
+            /app/share/animecix/assets/changelog/ekrangoruntusu.mp4
           flatpak run --command=mpv io.github.veilzon.AnimeciX --version
           # LuaJIT/OSC kontrolü: OSC olmadan oynatma kontrolleri görünmez.
           flatpak run --command=mpv io.github.veilzon.AnimeciX --list-options | grep -q -- '--osc' || { echo 'OSC/Lua yok'; exit 1; }
